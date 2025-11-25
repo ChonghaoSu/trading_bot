@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Bot - Control Panel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Trading Bot Control Panel</h1>
+            <p class="subtitle">Manage your portfolio, watchlist, and strategy settings</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('holdings')">📊 Holdings</button>
+            <button class="tab-btn" onclick="showTab('watchlist')">👀 Watchlist</button>
+            <button class="tab-btn" onclick="showTab('settings')">⚙️ Settings</button>
+        </div>
+
+        <!-- Holdings Tab -->
+        <div id="holdings-tab" class="tab-content active">
+            <div class="card">
+                <h2>Your Portfolio Holdings</h2>
+                <div class="table-container">
+                    <table id="holdings-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Shares</th>
+                                <th>Avg Cost</th>
+                                <th>Current Price</th>
+                                <th>Current Value</th>
+                                <th>P&L</th>
+                                <th>P&L %</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdings-body">
+                            {% for holding in holdings %}
+                            <tr data-symbol="{{ holding.symbol }}">
+                                <td><strong>{{ holding.symbol }}</strong></td>
+                                <td>{{ "%.3f"|format(holding.shares) }}</td>
+                                <td>${{ "%.2f"|format(holding.avg_cost) }}</td>
+                                <td class="current-price" id="price-{{ holding.symbol }}">Loading...</td>
+                                <td class="current-value" id="value-{{ holding.symbol }}">-</td>
+                                <td class="pnl" id="pnl-{{ holding.symbol }}">-</td>
+                                <td class="pnl-percent" id="pnl-pct-{{ holding.symbol }}">-</td>
+                                <td>
+                                    <button class="btn-danger btn-sm" onclick="deleteHolding('{{ holding.symbol }}')">Delete</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="portfolio-total">
+                                <td colspan="4"><strong>Portfolio Total</strong></td>
+                                <td id="total-current-value"><strong>-</strong></td>
+                                <td id="total-pnl"><strong>-</strong></td>
+                                <td id="total-pnl-pct"><strong>-</strong></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0f9ff; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div>
+                            <span style="color: #64748b; font-size: 0.9rem;">Last updated: </span>
+                            <span id="last-update-time" style="font-weight: 600;">-</span>
+                            <span style="color: #64748b; font-size: 0.9rem; margin-left: 1rem;">Auto-refresh: </span>
+                            <span id="refresh-status" style="font-weight: 600; color: #16a34a;">● Live</span>
+                        </div>
+                        <button onclick="refreshPrices()" class="btn-primary btn-sm">🔄 Refresh Now</button>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #f59e0b; padding: 0.5rem; background: #fffbeb; border-radius: 4px; border-left: 3px solid #f59e0b;">
+                        ⚠️ <strong>Note:</strong> Prices are from yfinance (free data) and may be delayed 15-20 minutes. 
+                        Robinhood shows real-time prices, so there may be a discrepancy.
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>➕ Add New Holding</h3>
+                    <form id="add-holding-form" onsubmit="addHolding(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="holding-symbol">Stock Symbol</label>
+                                <input type="text" id="holding-symbol" placeholder="AAPL" required pattern="[A-Z]{1,5}" style="text-transform: uppercase;">
+                            </div>
+                            <div class="form-group">
+                                <label for="holding-shares">Shares</label>
+                                <input type="number" id="holding-shares" step="0.001" min="0.001" placeholder="10.0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="holding-cost">Avg Cost ($)</label>
+                                <input type="number" id="holding-cost" step="0.01" min="0.01" placeholder="150.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <button type="submit" class="btn-primary">Add Holding</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Watchlist Tab -->
+        <div id="watchlist-tab" class="tab-content">
+            <div class="card">
+                <h2>Stock Watchlist</h2>
+                <p class="info-text">Stocks the bot will scan for buy opportunities (momentum + pullback strategy)</p>
+                
+                <div class="watchlist-grid" id="watchlist-container">
+                    {% for symbol in watchlist %}
+                    <div class="watchlist-item" data-symbol="{{ symbol }}">
+                        <span class="symbol-badge">{{ symbol }}</span>
+                        <button class="btn-danger btn-sm" onclick="deleteWatchlistItem('{{ symbol }}')">×</button>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="form-section">
+                    <h3>➕ Add to Watchlist</h3>
+                    <form id="add-watchlist-form" onsubmit="addWatchlistItem(event)">
+                        <div class="form-inline">
+                            <input type="text" id="watchlist-symbol" placeholder="Enter stock symbol (e.g., AAPL)" required pattern="[A-Z]{1,5}" style="text-transform: uppercase;">
+                            <button type="submit" class="btn-primary">Add Symbol</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content">
+            <div class="card">
+                <h2>Email Settings</h2>
+                <form id="email-form" onsubmit="updateEmailSettings(event)">
+                    <div class="form-group">
+                        <label for="email-from">From Email</label>
+                        <input type="email" id="email-from" value="{{ config.email_from }}" placeholder="alerts@yourdomain.com" required>
+                        <small>Must be verified in Resend</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="email-to">To Email (Your Email)</label>
+                        <input type="email" id="email-to" value="{{ config.email_to }}" placeholder="your-email@gmail.com" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Save Email Settings</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Alert Thresholds</h2>
+                <p class="info-text">Configure when the bot should send you alerts</p>
+                
+                <form id="strategy-form" onsubmit="updateStrategySettings(event)">
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="hard-stop">Hard Stop Loss</label>
+                            <div class="input-group">
+                                <input type="number" id="hard-stop" step="0.01" min="0.01" max="1.0" value="{{ config.hard_stop }}" required>
+                                <span class="input-suffix">× avg_cost</span>
+                            </div>
+                            <small>Alert when price ≤ avg_cost × {{ config.hard_stop }} ({{ ((1 - config.hard_stop) * 100)|round(1) }}% loss)</small>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="warning">Early Warning</label>
+                            <div class="input-group">
+                                <input type="number" id="warning" step="0.01" min="0.01" max="1.0" value="{{ config.warning }}" required>
+                                <span class="input-suffix">× avg_cost</span>
+                            </div>
+                            <small>Alert when price ≤ avg_cost × {{ config.warning }} ({{ ((1 - config.warning) * 100)|round(1) }}% loss)</small>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="profit-target">Profit Target</label>
+                            <div class="input-group">
+                                <input type="number" id="profit-target" step="0.01" min="1.0" value="{{ config.profit_target }}" required>
+                                <span class="input-suffix">× avg_cost</span>
+                            </div>
+                            <small>Alert when price ≥ avg_cost × {{ config.profit_target }} ({{ ((config.profit_target - 1) * 100)|round(1) }}% gain)</small>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;">Buy Signal Criteria</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="pullback">Pullback from 52W High</label>
+                            <div class="input-group">
+                                <input type="number" id="pullback" step="0.1" min="0" value="{{ config.pullback }}" required>
+                                <span class="input-suffix">%</span>
+                            </div>
+                            <small>Stock must be down ≥{{ config.pullback }}% from 52-week high</small>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="rsi-max">Maximum RSI</label>
+                            <div class="input-group">
+                                <input type="number" id="rsi-max" step="1" min="0" max="100" value="{{ config.rsi_max }}" required>
+                                <span class="input-suffix">RSI</span>
+                            </div>
+                            <small>RSI(14) must be below {{ config.rsi_max }} (not overbought)</small>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Save Strategy Settings</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+

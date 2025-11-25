@@ -1,0 +1,12 @@
+# Trading Bot Dependencies
+# Install with: pip install -r requirements.txt
+
+yfinance>=0.2.33          # Free stock data from Yahoo Finance
+schedule>=1.2.0           # Job scheduling for 5-minute checks
+python-telegram-bot>=20.7 # Telegram notifications
+pytz>=2023.3             # Timezone handling for market hours
+pandas>=2.0.0            # Data manipulation
+requests>=2.31.0         # HTTP requests for Resend email API
+flask>=3.0.0             # Web UI framework
+python-dotenv>=1.0.0     # Environment variable management
+
