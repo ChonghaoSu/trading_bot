@@ -22,3 +22,5 @@ Write-Host "⌨️  Press Ctrl+C to stop the server`n" -ForegroundColor Gray
 # Start the Flask app
 python app.py
 
+
+

@@ -38,3 +38,5 @@ Write-Host "   3. Save the file" -ForegroundColor White
 Write-Host "`n⚠️  IMPORTANT: Never commit .env to GitHub!" -ForegroundColor Red
 Write-Host "   It's already in .gitignore for safety.`n" -ForegroundColor Gray
 
+
+
